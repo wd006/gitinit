@@ -1,0 +1,3 @@
+# gitinit
+
+Project Bootstrapper & Automator

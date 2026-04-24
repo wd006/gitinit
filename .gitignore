@@ -1,0 +1,9 @@
+# OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+
+# NPM
+node_modules/
