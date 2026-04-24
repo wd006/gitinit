@@ -13,6 +13,7 @@ GITINIT_DIR="$HOME/.gitinit"
 CONFIG_FILE="$GITINIT_DIR/config.env"
 IGNORE_DIR="$GITINIT_DIR/gitignores"
 LICENSE_DIR="$GITINIT_DIR/licenses"
+GITHUB_DIR="$GITINIT_DIR/github_bundles"
 
 # display ascii header
 show_header() {
@@ -37,6 +38,7 @@ get_pc_user() { whoami 2>/dev/null || echo "user"; }
 init_ecosystem() {
     mkdir -p "$IGNORE_DIR"
     mkdir -p "$LICENSE_DIR"
+    mkdir -p "$GITHUB_DIR"
     
     if [[ ! -f "$CONFIG_FILE" ]]; then
         cat <<EOF > "$CONFIG_FILE"
@@ -48,6 +50,8 @@ CUSTOM_LIC_LABELS=()
 CUSTOM_LIC_FILES=()
 CUSTOM_IGN_LABELS=()
 CUSTOM_IGN_FILES=()
+CUSTOM_GH_LABELS=()
+CUSTOM_GH_DIRS=()
 EOF
     fi
 }
@@ -78,6 +82,18 @@ EOF
     write_array CUSTOM_LIC_FILES
     write_array CUSTOM_IGN_LABELS
     write_array CUSTOM_IGN_FILES
+    write_array CUSTOM_GH_LABELS
+    write_array CUSTOM_GH_DIRS
+}
+
+# cross-platform template string replacer
+apply_placeholders() {
+    local file=$1
+    sed -e "s|{{YEAR}}|$CURRENT_YEAR|g" \
+        -e "s|{{OWNER}}|$REPO_OWNER|g" \
+        -e "s|{{REPO_NAME}}|$REPO_NAME|g" \
+        -e "s|{{REPO_DESC}}|$REPO_DESC|g" "$file" > "${file}.tmp"
+    mv "${file}.tmp" "$file"
 }
 
 # argument routing
@@ -100,6 +116,8 @@ case "$1" in
         declare -a CUSTOM_LIC_FILES=()
         declare -a CUSTOM_IGN_LABELS=()
         declare -a CUSTOM_IGN_FILES=()
+        declare -a CUSTOM_GH_LABELS=()
+        declare -a CUSTOM_GH_DIRS=()
         ;;
     --config|config)
         init_ecosystem
@@ -109,26 +127,27 @@ case "$1" in
             echo -e "\n${CYAN}=== gitinit Configuration Manager ===${NC}"
             echo -e "1) Manage saved directories (${#SAVED_DIRS[@]} saved)"
             echo -e "2) Manage saved license owners (${#SAVED_OWNERS[@]} saved)"
-            echo -e "3) Change default branch name (Current: ${GREEN}${PREF_BRANCH:-"Ask dynamically"}${NC})"
-            echo -e "4) Change .gitattributes behavior (Current: ${GREEN}${PREF_GITATTR:-"Ask dynamically"}${NC})"
+            echo -e "3) Change default branch name (Current: ${GREEN}${PREF_BRANCH:-"Ask every time"}${NC})"
+            echo -e "4) Change .gitattributes behavior (Current: ${GREEN}${PREF_GITATTR:-"Ask every time"}${NC})"
             echo -e "5) Manage .gitignore templates (${#CUSTOM_IGN_LABELS[@]} saved)"
             echo -e "6) Manage custom LICENSE templates (${#CUSTOM_LIC_LABELS[@]} saved)"
-            echo -e "7) Export configuration ecosystem (.tar.gz)"
-            echo -e "8) Import configuration ecosystem (.tar.gz)"
+            echo -e "7) Manage custom .github bundles (${#CUSTOM_GH_LABELS[@]} saved)"
+            echo -e "8) Export configuration ecosystem (.tar.gz)"
+            echo -e "9) Import configuration ecosystem (.tar.gz)"
             echo -e "0) Exit"
-            read -p "> Select option (0-8): " M_OPT
+            read -p "> Select option (0-9): " M_OPT
             if ! [[ "$M_OPT" =~ ^[0-9]+$ ]]; then M_OPT=99; fi
             case "$M_OPT" in
                 3) read -p "New branch name (Leave empty to clear): " PREF_BRANCH; save_config; echo -e "${GREEN}[+] Configuration updated.${NC}" ;;
                 4) 
-                   echo "1) Always generate, 2) Always skip, 3) Ask dynamically"
+                   echo "1) Always generate, 2) Always skip, 3) Ask every time"
                    read -p "> Select preference: " GA_OPT
                    [[ $GA_OPT == 1 ]] && PREF_GITATTR="yes"
                    [[ $GA_OPT == 2 ]] && PREF_GITATTR="no"
                    [[ $GA_OPT == 3 ]] && PREF_GITATTR=""
                    save_config; echo -e "${GREEN}[+] Configuration updated.${NC}" ;;
-                7)
-                   read -p "Export destination path[$PWD/gitinit-backup.tar.gz]: " EXP_PATH
+                8)
+                   read -p "Export destination path [$PWD/gitinit-backup.tar.gz]: " EXP_PATH
                    EXP_PATH=${EXP_PATH:-"$PWD/gitinit-backup.tar.gz"}
                    EXP_PATH="${EXP_PATH/#\~/$HOME}"
                    if tar -czf "$EXP_PATH" -C "$GITINIT_DIR" . 2>/dev/null; then
@@ -137,7 +156,7 @@ case "$1" in
                        echo -e "${RED}[-] Export failed. Check permissions and paths.${NC}"
                    fi
                    ;;
-                8)
+                9)
                    read -p "Enter path to backup archive (.tar.gz): " IMP_PATH
                    IMP_PATH="${IMP_PATH/#\~/$HOME}"
                    if [[ -f "$IMP_PATH" ]]; then
@@ -176,7 +195,7 @@ fi
 
 # 1. target directory setup
 echo -e "${CYAN}[?] Select the target directory for the project:${NC}"
-echo "  1) Script Default ($HOME/projects)"
+echo "  1) Script default ($HOME/projects)"
 DIR_IDX=2
 for dir in "${SAVED_DIRS[@]}"; do
     echo "  $DIR_IDX) $dir (Saved)"
@@ -280,7 +299,7 @@ if ! [[ "$LIC_CHOICE" =~ ^[0-9]+$ ]]; then LIC_CHOICE=1; fi
 
 CHOSEN_LICENSE="BUILTIN|$LIC_CHOICE"
 if [[ $LIC_CHOICE -eq $NEW_LIC_IDX ]]; then
-    echo -e "\n${BLUE}[i] Info: Placeholders {{YEAR}} and {{OWNER}} in your custom license file will be automatically populated.${NC}\n"
+    echo -e "\n${BLUE}[i] Info: Placeholders {{YEAR}}, {{OWNER}}, {{REPO_NAME}}, {{REPO_DESC}} will be automatically populated.${NC}\n"
     read -p "[?] Enter the absolute path to your custom license file: " NEW_LIC_PATH
     NEW_LIC_PATH="${NEW_LIC_PATH/#\~/$HOME}"
     if [[ -f "$NEW_LIC_PATH" ]]; then
@@ -365,7 +384,58 @@ elif [[ $IGN_CHOICE -ge 5 && $IGN_CHOICE -lt $NEW_IGN_IDX ]]; then
     CHOSEN_IGNORE="CUSTOM|${CUSTOM_IGN_FILES[$ARR_IDX]}"
 fi
 
-# 6. gitattributes setup
+# 6. github folder bundle selection
+echo -e "\n${CYAN}[?] Select a .github/ template bundle (workflows, issue templates, etc.):${NC}"
+echo "  0) None"
+GH_IDX=1
+if [[ ${#CUSTOM_GH_LABELS[@]} -gt 0 ]]; then
+    echo "  -- Saved Bundles --"
+    for i in "${!CUSTOM_GH_LABELS[@]}"; do
+        echo "  $GH_IDX) ${CUSTOM_GH_LABELS[$i]}"
+        ((GH_IDX++))
+    done
+fi
+echo "  --"
+NEW_GH_IDX=$GH_IDX
+echo "  $NEW_GH_IDX) + Import a new .github folder bundle..."
+
+read -p "> Select option (0-$NEW_GH_IDX) [0]: " GH_CHOICE
+GH_CHOICE=${GH_CHOICE:-0}
+if ! [[ "$GH_CHOICE" =~ ^[0-9]+$ ]]; then GH_CHOICE=0; fi
+
+CHOSEN_GH="NONE|0"
+if [[ $GH_CHOICE -eq $NEW_GH_IDX ]]; then
+    echo -e "\n${BLUE}[i] Info: Placeholders {{YEAR}}, {{OWNER}}, {{REPO_NAME}}, {{REPO_DESC}} inside your .github files will be populated.${NC}\n"
+    read -p "[?] Enter the absolute path to the .github directory: " NEW_GH_PATH
+    NEW_GH_PATH="${NEW_GH_PATH/#\~/$HOME}"
+    if [[ -d "$NEW_GH_PATH" ]]; then
+        if [[ $USE_CONFIG -eq 1 ]]; then
+            read -p "  > Import and save this bundle into the ecosystem for future use? (y/N): " SAVE_GH
+            if [[ "$SAVE_GH" =~ ^[Yy]$ ]]; then
+                read -p "  [?] Enter a display label for this bundle: " NEW_GH_LBL
+                NEW_DIRNAME="bundle_$(date +%s)"
+                mkdir -p "$GITHUB_DIR/$NEW_DIRNAME"
+                cp -a "$NEW_GH_PATH/." "$GITHUB_DIR/$NEW_DIRNAME/"
+                CUSTOM_GH_LABELS+=("$NEW_GH_LBL")
+                CUSTOM_GH_DIRS+=("$NEW_DIRNAME")
+                save_config
+                echo -e "  ${GREEN}[+] Bundle successfully imported and saved.${NC}"
+                CHOSEN_GH="CUSTOM|$NEW_DIRNAME"
+            else
+                CHOSEN_GH="ONETIME|$NEW_GH_PATH"
+            fi
+        else
+            CHOSEN_GH="ONETIME|$NEW_GH_PATH"
+        fi
+    else
+        echo -e "${RED}[-] Error: Directory not found. Skipping .github bundle implementation.${NC}"
+    fi
+elif [[ $GH_CHOICE -ge 1 && $GH_CHOICE -lt $NEW_GH_IDX ]]; then
+    ARR_IDX=$((GH_CHOICE - 1))
+    CHOSEN_GH="CUSTOM|${CUSTOM_GH_DIRS[$ARR_IDX]}"
+fi
+
+# 7. gitattributes setup
 DO_GITATTR=0
 if [[ -z "$PREF_GITATTR" ]]; then
     echo -e "\n${CYAN}[?] Generate .gitattributes to enforce consistent line endings (CRLF/LF)?:${NC}"
@@ -374,7 +444,7 @@ if [[ -z "$PREF_GITATTR" ]]; then
         echo "  2) Yes, generate it (Save as default)"
         echo "  3) No, skip"
         echo "  4) No, skip (Save as default)"
-        read -p "> Select option (1-4) [1]: " GA_CHOICE
+        read -p "> Select option (1-4)[1]: " GA_CHOICE
         GA_CHOICE=${GA_CHOICE:-1}
         if ! [[ "$GA_CHOICE" =~ ^[1-4]$ ]]; then GA_CHOICE=1; fi
         
@@ -400,7 +470,7 @@ else
     [[ "$PREF_GITATTR" == "yes" ]] && DO_GITATTR=1 || DO_GITATTR=0
 fi
 
-# 7. branch selection
+# 8. branch selection
 if [[ -z "$PREF_BRANCH" ]]; then
     echo -e "\n${CYAN}[?] Specify the initial branch name:${NC}"
     if [[ $USE_CONFIG -eq 1 ]]; then
@@ -438,12 +508,12 @@ else
     REPO_BRANCH="$PREF_BRANCH"
 fi
 
-# 8. npm setup
+# 9. npm setup
 echo ""
 read -p "[?] Initialize NPM 'commit-and-tag-version' and configure package.json? (y/N) [y]: " SETUP_NPM
 SETUP_NPM=${SETUP_NPM:-y}
 
-# 9. remote repository setup
+# 10. remote repository setup
 echo ""
 read -p "[?] Enter Git remote URL (SSH/HTTPS)[Leave blank to use GitHub CLI]: " REMOTE_URL
 
@@ -494,7 +564,8 @@ elif [[ "$LIC_TYPE" == "CUSTOM" || "$LIC_TYPE" == "ONETIME" ]]; then
     echo -e "${YELLOW}[*] Generating LICENSE (Custom template)...${NC}"
     SRC_FILE=""
     [[ "$LIC_TYPE" == "CUSTOM" ]] && SRC_FILE="$LICENSE_DIR/$LIC_VAL" || SRC_FILE="$LIC_VAL"
-    sed -e "s|{{YEAR}}|$CURRENT_YEAR|g" -e "s|{{OWNER}}|$REPO_OWNER|g" "$SRC_FILE" > LICENSE
+    cp "$SRC_FILE" LICENSE
+    apply_placeholders "LICENSE"
 fi
 
 # generate gitignore
@@ -509,6 +580,20 @@ if [[ "$IGN_TYPE" == "BUILTIN" && "$IGN_VAL" != "0" ]]; then
 elif [[ "$IGN_TYPE" == "CUSTOM" || "$IGN_TYPE" == "ONETIME" ]]; then
     echo -e "${YELLOW}[*] Generating .gitignore (Custom template)...${NC}"
     [[ "$IGN_TYPE" == "CUSTOM" ]] && cat "$IGNORE_DIR/$IGN_VAL" > .gitignore || cat "$IGN_VAL" > .gitignore
+fi
+
+# generate github bundle
+IFS='|' read -r GH_TYPE GH_VAL <<< "$CHOSEN_GH"
+if [[ "$GH_TYPE" == "CUSTOM" || "$GH_TYPE" == "ONETIME" ]]; then
+    echo -e "${YELLOW}[*] Generating .github/ directory (Custom bundle)...${NC}"
+    SRC_DIR=""
+    [[ "$GH_TYPE" == "CUSTOM" ]] && SRC_DIR="$GITHUB_DIR/$GH_VAL" || SRC_DIR="$GH_VAL"
+    mkdir -p .github
+    cp -a "$SRC_DIR/." ".github/"
+    
+    find .github -type f | while read -r file; do
+        apply_placeholders "$file"
+    done
 fi
 
 # generate gitattributes
