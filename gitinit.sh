@@ -113,8 +113,10 @@ case "$1" in
             echo -e "4) Change .gitattributes behavior (Current: ${GREEN}${PREF_GITATTR:-"Ask dynamically"}${NC})"
             echo -e "5) Manage .gitignore templates (${#CUSTOM_IGN_LABELS[@]} saved)"
             echo -e "6) Manage custom LICENSE templates (${#CUSTOM_LIC_LABELS[@]} saved)"
+            echo -e "7) Export configuration ecosystem (.tar.gz)"
+            echo -e "8) Import configuration ecosystem (.tar.gz)"
             echo -e "0) Exit"
-            read -p "> Select option (0-6): " M_OPT
+            read -p "> Select option (0-8): " M_OPT
             if ! [[ "$M_OPT" =~ ^[0-9]+$ ]]; then M_OPT=99; fi
             case "$M_OPT" in
                 3) read -p "New branch name (Leave empty to clear): " PREF_BRANCH; save_config; echo -e "${GREEN}[+] Configuration updated.${NC}" ;;
@@ -125,6 +127,37 @@ case "$1" in
                    [[ $GA_OPT == 2 ]] && PREF_GITATTR="no"
                    [[ $GA_OPT == 3 ]] && PREF_GITATTR=""
                    save_config; echo -e "${GREEN}[+] Configuration updated.${NC}" ;;
+                7)
+                   read -p "Export destination path[$PWD/gitinit-backup.tar.gz]: " EXP_PATH
+                   EXP_PATH=${EXP_PATH:-"$PWD/gitinit-backup.tar.gz"}
+                   EXP_PATH="${EXP_PATH/#\~/$HOME}"
+                   if tar -czf "$EXP_PATH" -C "$GITINIT_DIR" . 2>/dev/null; then
+                       echo -e "${GREEN}[+] Ecosystem successfully exported to: $EXP_PATH${NC}"
+                   else
+                       echo -e "${RED}[-] Export failed. Check permissions and paths.${NC}"
+                   fi
+                   ;;
+                8)
+                   read -p "Enter path to backup archive (.tar.gz): " IMP_PATH
+                   IMP_PATH="${IMP_PATH/#\~/$HOME}"
+                   if [[ -f "$IMP_PATH" ]]; then
+                       echo -e "${YELLOW}[!] WARNING: This will permanently overwrite your current configuration and templates.${NC}"
+                       read -p "> Proceed with import? (y/N): " CONFIRM_IMP
+                       if [[ "$CONFIRM_IMP" =~ ^[Yy]$ ]]; then
+                           rm -rf "$GITINIT_DIR"/*
+                           if tar -xzf "$IMP_PATH" -C "$GITINIT_DIR" 2>/dev/null; then
+                               [[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
+                               echo -e "${GREEN}[+] Ecosystem successfully imported.${NC}"
+                           else
+                               echo -e "${RED}[-] Import failed. Ensure the file is a valid tar.gz archive.${NC}"
+                           fi
+                       else
+                           echo -e "${BLUE}[i] Import cancelled.${NC}"
+                       fi
+                   else
+                       echo -e "${RED}[-] File not found: $IMP_PATH${NC}"
+                   fi
+                   ;;
                 0) exit 0 ;;
                 *) echo -e "${YELLOW}[i] List management interface is minimized. Modify '${CONFIG_FILE}' directly for advanced edits.${NC}" ;;
             esac
