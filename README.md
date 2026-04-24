@@ -19,11 +19,11 @@
 
 <br>
 
-**GitInit** is a zero-dependency, highly customizable CLI wizard designed to eliminate the repetitive tasks of starting a new project. It automates directory creation, metadata generation (`README`, dynamic `LICENSE`, `.gitignore`, `.gitattributes`), NPM versioning setups, and local/remote repository initialization via GitHub CLI. It also features a persistent, self-contained ecosystem to remember your preferences and custom templates.
+**Gitinit** is a zero-dependency, highly customizable CLI wizard designed to eliminate the repetitive tasks of starting a new project. It automates directory creation, metadata generation (`README`, dynamic `LICENSE`, `.gitignore`, `.gitattributes`), NPM versioning setups, and local/remote repository initialization via GitHub CLI. It also features a persistent, self-contained ecosystem to remember your preferences and custom templates.
 
 ## 📑 Table of Contents
 - [✨ Features](#-features)
--[🚀 Installation & Quick Start](#-installation--quick-start)
+- [🚀 Installation & Quick Start](#-installation--quick-start)
 - [📖 Documentation & Usage](#-documentation--usage)
 - [⚙️ Under the Hood (Architecture)](#️-under-the-hood-architecture)
 - [🧹 Cleanup & Uninstall](#-cleanup--uninstall)
@@ -55,7 +55,7 @@ curl -O https://raw.githubusercontent.com/wd006/gitinit/main/gitinit.sh && chmod
 
 ## 📖 Documentation & Usage
 
-**GitInit** supports multiple execution modes via CLI arguments to fit your workflow:
+**Gitinit** supports multiple execution modes via CLI arguments to fit your workflow:
 
 ### 1. Normal Mode
 Just type `gitinit` in your terminal. The CLI wizard will guide you through:
@@ -86,7 +86,7 @@ gitinit --no-config
 
 ## ⚙️ Under the Hood (Architecture)
 
-`GitInit` does not clutter your global dotfiles. Instead, it creates a self-contained, portable ecosystem in your home directory (`~/.gitinit/`).
+`Gitinit` does not clutter your global dotfiles. Instead, it creates a self-contained, portable ecosystem in your home directory (`~/.gitinit/`).
 
 ```text
 ~/.gitinit/
