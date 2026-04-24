@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.3.0](https://github.com/wd006/gitinit/compare/v1.2.0...v1.3.0) (2026-04-24)
+
+
+### Features
+
+* **script:** add support for .github folders ([57deced](https://github.com/wd006/gitinit/commit/57decedc88b2236c611f598c403559c943ece5b7))
+* **script:** add support for .github folders ([#2](https://github.com/wd006/gitinit/issues/2)) ([6e24915](https://github.com/wd006/gitinit/commit/6e249158f2847f4ed269efa175a8a534307a855e))
+
 ## [1.2.0](https://github.com/wd006/gitinit/compare/v1.1.0...v1.2.0) (2026-04-24)
 
 
